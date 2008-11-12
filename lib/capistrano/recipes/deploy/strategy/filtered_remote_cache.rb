@@ -4,7 +4,22 @@ require 'capistrano/recipes/deploy/strategy/remote'
 module Capistrano
   module Deploy
     module SCM
+      class Base
+        def is_from_same_repository_as(checkout)
+          "true"
+        end
+
+        def switch(revision, destination)
+          sync(revision, destination)
+        end
+      end
+
       class Subversion < Base
+        def is_from_same_repository_as(checkout)
+          "echo '#{configuration[:repository]}' | " +
+            "grep -q `svn info #{checkout} | grep 'Repository Root' | awk '{print $3}'`"
+        end
+
         def switch(revision, checkout)
           "cd #{checkout} && #{scm :switch, verbose, authentication, "-r#{revision}", repository}"
         end
@@ -39,10 +54,10 @@ module Capistrano
 
           def update_repository_cache
             logger.trace "checking if the cached copy repository root matches this deploy, then updating it"
-            command = "if [ -d #{repository_cache} ] && ! echo '#{configuration[:repository]}' | grep -q `svn info #{repository_cache} | grep 'Repository Root' | awk '{print $3}'`; then " + 
-              "rm -rf #{repository_cache} && #{source.checkout(revision, repository_cache)}; " + 
-              "elif [ -d #{repository_cache} ]; then #{source.switch(revision, repository_cache)}; " +
-              "else #{source.checkout(revision, repository_cache)}; fi"
+            command = "if [ -d #{repository_cache} ] && #{source.is_from_same_repository_as(repository_cache)}; then " +
+                "#{source.switch(revision, repository_cache)}; " +
+              "else rm -rf #{repository_cache} && #{source.checkout(revision, repository_cache)}; " +
+              "fi"
             scm_run(command)
           end
 
