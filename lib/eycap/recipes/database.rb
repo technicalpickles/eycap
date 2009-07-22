@@ -60,12 +60,12 @@ Capistrano::Configuration.instance(:must_exist).load do
     task :clone_to_local, :roles => :db, :only => {:primary => true} do
       backup_name
       dump
-      get "#{backup_file}.bz2", "/tmp/#{application}.sql.gz"
+      get "#{backup_file}.bz2", "/tmp/#{application}.sql.bz2"
       development_info = YAML.load_file("config/database.yml")['development']
       if development_info['adapter'] == 'mysql'
-        run_str = "bzcat /tmp/#{application}.sql.gz | mysql -u #{development_info['username']} --password='#{development_info['password']}' -h #{development_info['host']} #{development_info['database']}"
+        run_str = "bzcat /tmp/#{application}.sql.bz2 | mysql -u #{development_info['username']} --password='#{development_info['password']}' -h #{development_info['host']} #{development_info['database']}"
       else
-        run_str = "PGPASSWORD=#{development_info['password']} bzcat /tmp/#{application}.sql.gz | psql -U #{development_info['username']} -h #{development_info['host']} #{development_info['database']}"
+        run_str = "PGPASSWORD=#{development_info['password']} bzcat /tmp/#{application}.sql.bz2 | psql -U #{development_info['username']} -h #{development_info['host']} #{development_info['database']}"
       end
       %x!#{run_str}!
     end
